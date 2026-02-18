@@ -1,0 +1,106 @@
+{
+    "1472193243134562447": {
+        "mu": 1203.4081693079188,
+        "sigma": 63.75446023679047,
+        "history": [
+            {
+                "timestamp": 1771370372,
+                "mmr": 1018,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370404,
+                "mmr": 1004,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370681,
+                "mmr": 991,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370847,
+                "mmr": 1012,
+                "result": "Win"
+            }
+        ]
+    },
+    "1468328789032570910": {
+        "mu": 1228.2692561961226,
+        "sigma": 63.75446023679047,
+        "history": [
+            {
+                "timestamp": 1771370372,
+                "mmr": 1018,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370404,
+                "mmr": 1036,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370681,
+                "mmr": 1053,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370847,
+                "mmr": 1037,
+                "result": "Loss"
+            }
+        ]
+    },
+    "351117400529436675": {
+        "mu": 1202.6099027227065,
+        "sigma": 63.75446023679047,
+        "history": [
+            {
+                "timestamp": 1771370372,
+                "mmr": 986,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370404,
+                "mmr": 973,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370681,
+                "mmr": 990,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370847,
+                "mmr": 1011,
+                "result": "Win"
+            }
+        ]
+    },
+    "213764838063603712": {
+        "mu": 1165.7126717732522,
+        "sigma": 63.75446023679047,
+        "history": [
+            {
+                "timestamp": 1771370372,
+                "mmr": 986,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370404,
+                "mmr": 1004,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370681,
+                "mmr": 991,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370847,
+                "mmr": 974,
+                "result": "Loss"
+            }
+        ]
+    }
+}

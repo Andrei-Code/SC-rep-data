@@ -1,0 +1,126 @@
+{
+    "351117400529436675": {
+        "mu": 1260.5297746132958,
+        "sigma": 63.53349494620904,
+        "history": [
+            {
+                "timestamp": 1771370551,
+                "mmr": 1018,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370717,
+                "mmr": 1036,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370736,
+                "mmr": 1050,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370776,
+                "mmr": 1061,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771371287,
+                "mmr": 1069,
+                "result": "Win"
+            }
+        ]
+    },
+    "9003": {
+        "mu": 1229.2578543373986,
+        "sigma": 63.53349494620904,
+        "history": [
+            {
+                "timestamp": 1771370551,
+                "mmr": 1018,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370717,
+                "mmr": 1004,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370736,
+                "mmr": 1018,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370776,
+                "mmr": 1029,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771371287,
+                "mmr": 1038,
+                "result": "Win"
+            }
+        ]
+    },
+    "9001": {
+        "mu": 1139.4702253867042,
+        "sigma": 63.53349494620904,
+        "history": [
+            {
+                "timestamp": 1771370551,
+                "mmr": 986,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370717,
+                "mmr": 973,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370736,
+                "mmr": 963,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370776,
+                "mmr": 955,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771371287,
+                "mmr": 948,
+                "result": "Loss"
+            }
+        ]
+    },
+    "9002": {
+        "mu": 1170.7421456626014,
+        "sigma": 63.53349494620904,
+        "history": [
+            {
+                "timestamp": 1771370551,
+                "mmr": 986,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370717,
+                "mmr": 1004,
+                "result": "Win"
+            },
+            {
+                "timestamp": 1771370736,
+                "mmr": 994,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771370776,
+                "mmr": 986,
+                "result": "Loss"
+            },
+            {
+                "timestamp": 1771371287,
+                "mmr": 980,
+                "result": "Loss"
+            }
+        ]
+    }
+}
