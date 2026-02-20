@@ -82,8 +82,11 @@ current_match = {
     "test_mode": False,
 }
 
+current_observers: set[int] = set()
+
 bot_settings = {
-    "auto_replay": True  # Starts ON by default
+    "auto_replay": True,  # Starts ON by default
+    "last_lobby_time": 0.0,
 }
 
 
@@ -136,6 +139,7 @@ class MatchView(discord.ui.View):
             or await guild.create_voice_channel("Team Blue", category=category)
         )
 
+        # Move players to their respective team channels
         for m in team_1:
             if getattr(m, "voice", None) and m.voice:
                 try:
@@ -148,6 +152,20 @@ class MatchView(discord.ui.View):
                     await m.move_to(vc_blue)
                 except discord.HTTPException:
                     pass
+
+        # Move observers semi-randomly into the two team channels
+        if lobby_channel:
+            observers_in_lobby = [
+                m for m in lobby_channel.members
+                if m.id in current_observers and not m.bot
+            ]
+            for i, obs in enumerate(observers_in_lobby):
+                if getattr(obs, "voice", None) and obs.voice:
+                    target_vc = vc_red if i % 2 == 0 else vc_blue
+                    try:
+                        await obs.move_to(target_vc)
+                    except discord.HTTPException:
+                        pass
 
         self._lobby_started = True
         self._set_win_buttons_enabled(True)
@@ -208,15 +226,24 @@ class MatchView(discord.ui.View):
         if getattr(self, "_lobby_started", False) and current_match.get("lobby_channel"):
             lobby = current_match["lobby_channel"]
             all_players = current_match.get("team_1", []) + current_match.get("team_2", [])
-            for player in all_players:
+            guild = interaction.guild
+            
+            # Find any observers that might have been pulled into the team channels
+            vc_red = discord.utils.get(guild.voice_channels, name="Team Red")
+            vc_blue = discord.utils.get(guild.voice_channels, name="Team Blue")
+            observers = []
+            if vc_red:
+                observers.extend([m for m in vc_red.members if m.id in current_observers])
+            if vc_blue:
+                observers.extend([m for m in vc_blue.members if m.id in current_observers])
+                
+            for player in all_players + observers:
                 if getattr(player, "voice", None) and player.voice:
                     try:
                         await player.move_to(lobby)
                     except discord.HTTPException:
                         pass
-            guild = interaction.guild
-            vc_red = discord.utils.get(guild.voice_channels, name="Team Red")
-            vc_blue = discord.utils.get(guild.voice_channels, name="Team Blue")
+                        
             category = discord.utils.get(guild.categories, name="Scrims")
             if vc_red:
                 await vc_red.delete()
@@ -453,6 +480,17 @@ def generate_session_graph(
 
 # --- BOT EVENTS ---------------------------------------------------------------
 
+async def clear_all_observers() -> None:
+    """Clears the active observers list and removes the Observer role from everyone."""
+    current_observers.clear()
+    for guild in bot.guilds:
+        obs_role = discord.utils.get(guild.roles, name="Observer")
+        for member in guild.members:
+            if obs_role and obs_role in member.roles:
+                try:
+                    await member.remove_roles(obs_role)
+                except discord.Forbidden:
+                    pass
 
 @bot.event
 async def on_ready():
@@ -467,6 +505,9 @@ async def on_ready():
         print(f"Synced {len(synced)} slash command(s).")
     except Exception as e:
         print(f"Failed to sync commands: {e}")
+
+    # Ensure no one is stuck as an observer if the bot crashed/restarted
+    await clear_all_observers()
 
     print(f"Logged in as {bot.user.name}")
 
@@ -533,7 +574,17 @@ async def handle_victory_slash(
     all_players = team_red + team_blue
 
     if lobby:
-        for player in all_players:
+        # Find any observers that might have been pulled into the team channels
+        guild = interaction.guild
+        vc_red = discord.utils.get(guild.voice_channels, name="Team Red")
+        vc_blue = discord.utils.get(guild.voice_channels, name="Team Blue")
+        observers = []
+        if vc_red:
+            observers.extend([m for m in vc_red.members if m.id in current_observers])
+        if vc_blue:
+            observers.extend([m for m in vc_blue.members if m.id in current_observers])
+            
+        for player in all_players + observers:
             if getattr(player, "voice", None) and player.voice:
                 try:
                     await player.move_to(lobby)
@@ -848,6 +899,13 @@ async def _run_match_lobby(
 async def match(interaction: discord.Interaction, balanced: bool = False):
     await interaction.response.defer()
 
+    # If it's been over an hour since the last match started, clear all observers first
+    current_time = time.time()
+    if current_time - bot_settings["last_lobby_time"] > 3600:
+        await clear_all_observers()
+        
+    bot_settings["last_lobby_time"] = current_time
+
     if current_match["active"]:
         await interaction.followup.send(
             "⚠️ Match already in progress! Use the win buttons first."
@@ -861,7 +919,11 @@ async def match(interaction: discord.Interaction, balanced: bool = False):
         return
 
     lobby_channel = interaction.user.voice.channel
-    players = [member for member in lobby_channel.members if not member.bot]
+    players = [
+        member
+        for member in lobby_channel.members
+        if not member.bot and member.id not in current_observers
+    ]
 
     if len(players) < 2:
         await interaction.followup.send(
@@ -872,6 +934,53 @@ async def match(interaction: discord.Interaction, balanced: bool = False):
     await _run_match_lobby(
         interaction, players, lobby_channel, test_mode=False, balanced=balanced
     )
+
+
+@bot.tree.command(
+    name="obs",
+    description="👀 Toggles your observer status. Observers are excluded from matchmaking.",
+)
+async def obs(interaction: discord.Interaction):
+    member = interaction.user
+    if not isinstance(member, discord.Member) or not interaction.guild:
+        await interaction.response.send_message("❌ This command must be used in a server.", ephemeral=True)
+        return
+        
+    obs_role = discord.utils.get(interaction.guild.roles, name="Observer")
+    if not obs_role:
+        try:
+            obs_role = await interaction.guild.create_role(name="Observer", reason="Created by bot for observer tracking")
+        except discord.Forbidden:
+            pass
+    
+    if member.id in current_observers:
+        # User is observing, turn it OFF
+        current_observers.discard(member.id)
+        
+        # Remove the Observer role
+        if obs_role and obs_role in member.roles:
+            try:
+                await member.remove_roles(obs_role)
+            except discord.Forbidden:
+                pass
+                
+        await interaction.response.send_message(
+            f"⚔️ **{member.display_name}** is no longer observing ⚔️\n*(They will be included in matches)*"
+        )
+    else:
+        # User is playing, turn it ON
+        current_observers.add(member.id)
+        
+        # Add the Observer role
+        if obs_role:
+            try:
+                await member.add_roles(obs_role)
+            except discord.Forbidden:
+                pass
+                
+        await interaction.response.send_message(
+            f"👁️ **{member.display_name}** is observing 👁️\n*(They will be excluded from matchmaking)*"
+        )
 
 
 @bot.tree.command(
@@ -894,12 +1003,18 @@ async def test(interaction: discord.Interaction):
         return
 
     lobby_channel = interaction.user.voice.channel
-    players = [
-        interaction.user,
+    
+    players = []
+    if interaction.user.id not in current_observers:
+        players.append(interaction.user)
+    else:
+        players.append(FakeMember(9004, "TestPlayer4"))
+        
+    players.extend([
         FakeMember(9001, "TestPlayer1"),
         FakeMember(9002, "TestPlayer2"),
         FakeMember(9003, "TestPlayer3"),
-    ]
+    ])
 
     await _run_match_lobby(
         interaction, players, lobby_channel, test_mode=True, balanced=False
