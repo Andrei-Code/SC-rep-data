@@ -24,6 +24,7 @@ from config import (
     CUSTOM_MU,
     CUSTOM_SIGMA,
     TEST_DATA_FILE,
+    MATCH_EMBED_STYLE,
 )
 from ratings import (
     model,
@@ -259,6 +260,81 @@ class MatchView(discord.ui.View):
 
 # --- ANALYTICS HELPERS --------------------------------------------------------
 
+def generate_session_history_text(
+    guild: discord.Guild,
+    data_file: str | None = None,
+    name_overrides: dict[str, str] | None = None,
+) -> tuple[str, str] | None:
+    data = load_data(data_file=data_file)
+    name_overrides = name_overrides or {}
+
+    cutoff_time = time.time() - SESSION_GAP_SECONDS
+
+    # 1. Grab the exact timestamps for this session's matches
+    lobby_matches = sorted(
+        list(
+            {
+                match["timestamp"]
+                for p_data in data.values()
+                if "history" in p_data
+                for match in p_data["history"]
+                if match["timestamp"] >= cutoff_time
+            }
+        )
+    )
+
+    if not lobby_matches:
+        return None
+
+    player_data_extracted = []
+
+    for pid, p_data in data.items():
+        if "history" not in p_data:
+            continue
+
+        history = p_data["history"]
+
+        # Check if this player actually played in this session
+        played_session = any(m["timestamp"] >= cutoff_time for m in history)
+        if not played_session:
+            continue
+
+        user = guild.get_member(int(pid))
+        name = name_overrides.get(
+            pid, user.display_name if user else f"User {pid[-4:]}"
+        )
+
+        match_results = []
+        for lobby_ts in lobby_matches:
+            played_this_game = next(
+                (m for m in history if m["timestamp"] == lobby_ts), None
+            )
+            if played_this_game:
+                if played_this_game["result"] == "Win":
+                    match_results.append("🟩")
+                else:
+                    match_results.append("🟥")
+            else:
+                match_results.append("⬛")
+
+        player_data_extracted.append({"name": name, "results": match_results})
+
+    if not player_data_extracted:
+        return None
+
+    names_column = []
+    emojis_column = []
+    for p in player_data_extracted:
+        names_column.append(f"**{p['name']}**")
+        spaced_emojis = " ".join(p["results"])
+        emojis_column.append(spaced_emojis)
+
+    if not names_column:
+        return None
+
+    return "\n".join(names_column), "\n".join(emojis_column)
+
+
 def generate_session_graph(
     guild: discord.Guild,
     data_file: str | None = None,
@@ -485,22 +561,37 @@ async def handle_victory_slash(
     current_match["lobby_channel"] = None
     current_match["test_mode"] = False
 
-    # Generate session graph (use test data when in test mode)
+    # Generate session visual (graph or history text)
     name_overrides = None
     if test_mode:
         name_overrides = {
             str(p.id): p.display_name for p in team_red + team_blue
         }
-    graph_file = generate_session_graph(
-        guild,
-        data_file=TEST_DATA_FILE if test_mode else None,
-        name_overrides=name_overrides,
-    )
-    if graph_file:
-        embed.set_image(url=f"attachment://{graph_file.filename}")
-        await interaction.followup.send(embed=embed, file=graph_file)
-    else:
+        
+    if MATCH_EMBED_STYLE == "history":
+        history_data = generate_session_history_text(
+            guild,
+            data_file=TEST_DATA_FILE if test_mode else None,
+            name_overrides=name_overrides,
+        )
+        if history_data:
+            names_col, emojis_col = history_data
+            # Add an invisible spacer to force the columns below onto a new row
+            embed.add_field(name="\u200b", value="\u200b", inline=False)
+            embed.add_field(name="Player", value=names_col, inline=True)
+            embed.add_field(name="Recent Matches", value=emojis_col, inline=True)
         await interaction.followup.send(embed=embed)
+    else:
+        graph_file = generate_session_graph(
+            guild,
+            data_file=TEST_DATA_FILE if test_mode else None,
+            name_overrides=name_overrides,
+        )
+        if graph_file:
+            embed.set_image(url=f"attachment://{graph_file.filename}")
+            await interaction.followup.send(embed=embed, file=graph_file)
+        else:
+            await interaction.followup.send(embed=embed)
 
     # --- 📼 AUTO-REPLAY INTEGRATION (skip in test mode) ---
     if not test_mode and bot_settings.get("auto_replay"):

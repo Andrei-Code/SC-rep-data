@@ -60,6 +60,9 @@ DISCORD_ATTACHMENT_LIMIT_MB: int = 25
 # Gap that defines a new play session in /graphall and history views
 SESSION_GAP_SECONDS: int = 8 * 60 * 60  # 8 hours
 
+# What to show in the embed after a match. Can be "graph" or "history".
+MATCH_EMBED_STYLE: str = "history"
+
 
 # --- Permissions / owner config ----------------------------------------------
 
