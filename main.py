@@ -856,7 +856,7 @@ async def _run_match_lobby(
         "Then use Red Wins / Blue Wins to report the result."
     )
     if test_mode:
-        desc += f"\n\n🧪 **Test:** MMR updates go to `{TEST_DATA_FILE}`."
+        desc += f"\n\n🧪 **Test:** MMR updates go to {TEST_DATA_FILE}."
 
     embed = discord.Embed(
         title=match_type_title,
@@ -875,6 +875,20 @@ async def _run_match_lobby(
 
     embed.add_field(name="🔴 Team Red", value=t1_names, inline=True)
     embed.add_field(name="🔵 Team Blue", value=t2_names, inline=True)
+
+    if lobby_channel:
+        observers_in_lobby = [
+            f"**{m.display_name}**"
+            for m in lobby_channel.members
+            if m.id in current_observers and not m.bot
+        ]
+        if observers_in_lobby:
+            embed.add_field(
+                name="👁️ Observers",
+                value=", ".join(observers_in_lobby),
+                inline=False,
+            )
+
     embed.add_field(
         name="📊 Match Odds",
         value=f"Team Red has a **{win_percentage}%** chance to win.",
